@@ -91,3 +91,21 @@ crypto-predict/
 ├── README.md                   # Project documentation
 ├── .env                        # Environment variables for sensitive data
 └── requirements.txt            # Root-level dependencies for Python
+
+Explanation
+
+data/ gets crypto market data with APIs (CoinGecko, Binance) -> raw & preprocessed
+
+models/ trains & evaluates data with saved ML models (time-series predictions)
+
+backend/ API to do model predictions and integrates w/ blockchain (flask or fastAPI)
+
+contracts/ Solidity smart contracts to handle user interactions & payments; migrations & test scripts
+
+frontend/ react app for user interaction; shows predictions and allows blockchain transactions
+
+scripts/ automation scripts for fetching data, training models, doing smartcontracts, basically everything
+
+tests/ tests for everything above
+
+Docker docker setup for running the project
