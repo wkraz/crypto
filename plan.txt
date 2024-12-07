@@ -1,0 +1,39 @@
+General plan
+
+High level
+1.	Learn Cryptocurrency Basics:
+	•	Understand blockchain concepts, cryptocurrency markets, and APIs like CoinGecko or Binance for accessing historical and live market data.
+2.	Learn Machine Learning for Time Series Analysis:
+	•	Study how to handle time-series data (e.g., cryptocurrency prices).
+	•	Train models like ARIMA, LSTMs, or Prophet to predict price trends.
+	•	Use Python with libraries like Pandas, NumPy, TensorFlow/Keras, or PyTorch.
+3.	Build a Backend for the Prediction System:
+	•	Use Python to create a server for model inference.
+	•	Implement APIs using Flask or FastAPI.
+4.	Learn Smart Contracts for Interaction:
+	•	Write Solidity contracts for handling user interactions and payments on the blockchain.
+5.	Connect Frontend with Backend and Blockchain:
+	•	Use React.js for the frontend.
+	•	Integrate predictions and blockchain interactions using Ethers.js or Web3.js.
+6.	Deploy the DApp:
+	•	Host the frontend on IPFS or Fleek.
+	•	Deploy the smart contracts on Ethereum or a test network like Polygon Mumbai.
+
+Tech stack
+•	Machine Learning: Python, TensorFlow/Keras, PyTorch
+•	Backend: Flask/FastAPI
+•	Frontend: React.js, Ethers.js/Web3.js
+•	Blockchain: Solidity, Ethereum (or Polygon)
+•	APIs: CoinGecko, Binance API
+•	Deployment: IPFS/Fleek, Alchemy or Infura for blockchain interaction
+
+Resources
+•	Time-Series Analysis:
+    •	https://machinelearningmastery.com/time-series-forecasting/
+    •	https://towardsdatascience.com/
+•	Smart Contracts with Solidity:
+    •	https://cryptozombies.io/
+    •	https://soliditylang.org/
+•	React + Blockchain Integration:
+    •	https://web3js.readthedocs.io/en/v1.7.0/
+    •	https://docs.ethers.io/v5/
