@@ -1,0 +1,46 @@
+Core Features
+
+1.	Crypto Selection and Graph Display
+	•	Use the CoinGecko API for price data, market metrics, and historical trends.
+	•	For graphing, use Chart.js or Recharts in your React app to plot price data dynamically.
+
+2.	Prediction Models
+	•	Implement models in Python and serve predictions via Flask:
+        •	Linear Regression: Simple trend analysis.
+        •	LSTM (Long Short-Term Memory): Better for time-series prediction.
+        •	ARIMA (Auto-Regressive Integrated Moving Average): Focus on statistical analysis.
+    •	Display results on a graph in green based on the previous range and future range (both user input)
+
+3.	Safety Score
+	•	Fetch metrics for safety assessment:
+        •	Token vesting schedules: Check for locked tokens and distribution patterns.
+        •	Liquidity metrics: Look for locked liquidity pools.
+        •	Volume trends: Sudden high volumes often indicate manipulation.
+        •	Developer activity: Analyze GitHub commits or public updates.
+    •	Aggregate metrics into one safety score (out of 100), and display + explain to user
+
+4.	Key Metrics
+	•	Display data like:
+        •	Current price, volume, and market cap.
+        •	Circulating supply and total supply.
+        •	Historical performance (e.g., % change over the last 7 days).
+
+Stretching Features
+1.	Risk Assessment Heatmap
+	•	Overlay a heatmap on the graph to visually indicate periods of high risk (e.g., low liquidity, large shareholder unlock events).
+2.	Portfolio Integration
+	•	Allow users to import their portfolio from MetaMask and provide predictions/safety scores for their holdings.
+3.	Social Sentiment Analysis
+	•	Scrape Twitter or Reddit for sentiment data and display a sentiment score (e.g., bullish, bearish).
+4.	Educational Insights
+	•	Add tooltips explaining metrics like “market cap,” “volume,” or “liquidity lock,” so beginners feel more confident.
+
+Potential new ideas
+1.	“What If” Scenarios
+	•	Let users simulate potential investments: “If you had invested $1000 X days ago, what would it be worth today?”
+2.	Volatility Score
+	•	Display a volatility score to indicate how risky a crypto is based on historical price swings.
+3.	API Access for Advanced Users
+	•	Expose an API so users can programmatically fetch safety scores or predictions.
+4.	Community Contributions
+	•	Allow users to rate or provide feedback on safety scores or predictions, making the app community-driven.
