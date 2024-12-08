@@ -1,0 +1,14 @@
+# General ignores
+node_modules
+__pycache__
+*.pyc
+*.pyo
+.env
+
+# Frontend-specific ignores
+frontend/node_modules
+frontend/build
+
+# Backend-specific ignores
+backend/__pycache__
+backend/instance
