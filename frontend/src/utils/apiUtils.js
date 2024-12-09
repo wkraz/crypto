@@ -1,19 +1,27 @@
-// src/utils/apiUtils.js
+// /frontend/src/utils/apiUtils.js
+
+const cache = new Map();
+
 export const fetchWithRetry = async (url, retries = 3, delay = 1000) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
         return await response.json();
-      } catch (error) {
-        console.error(`Attempt ${i + 1} failed: ${error.message}`);
-        if (i < retries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
-        } else {
-          throw new Error(`All ${retries} attempts failed`);
-        }
       }
+    } catch (err) {
+      console.error(`Retry ${i + 1} failed`);
     }
-  };
+    await new Promise((resolve) => setTimeout(resolve, delay)); // Delay between retries
+  }
+  throw new Error('Failed to fetch data after retries');
+};
+
+export const fetchWithCache = async (url, retries = 3, delay = 1000) => {
+  if (cache.has(url)) {
+    return cache.get(url);
+  }
+  const data = await fetchWithRetry(url, retries, delay);
+  cache.set(url, data);
+  return data;
+};

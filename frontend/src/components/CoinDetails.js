@@ -1,5 +1,7 @@
+// /frontend/src/components/CoinDetails.js
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { fetchWithCache } from '../utils/apiUtils'; // Import the caching function
 
 const CoinDetails = () => {
   const { id } = useParams(); // Get the coin ID from the URL
@@ -9,8 +11,7 @@ const CoinDetails = () => {
   useEffect(() => {
     const fetchCoinDetails = async () => {
       try {
-        const response = await fetch(`https://api.coingecko.com/api/v3/coins/${id}`);
-        const data = await response.json();
+        const data = await fetchWithCache(`https://api.coingecko.com/api/v3/coins/${id}`);
         setCoinDetails(data);
       } catch (err) {
         setError('Failed to fetch coin details. Please try again.');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Autosuggest from 'react-autosuggest';
 import { Line } from 'react-chartjs-2';
-import { fetchWithRetry } from '../utils/apiUtils';
+import { fetchWithRetry, fetchWithCache } from '../utils/apiUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -23,78 +23,86 @@ const CryptoGraph = () => {
   const [coinDetails, setCoinDetails] = useState({});
   const [value, setValue] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [error, setError] = useState(null);
 
+  // Fetch coins list once on mount
   useEffect(() => {
+    const fetchCoinsList = async () => {
+      try {
+        const response = await fetchWithCache(
+          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250',
+        );
+        setCoins(
+          response.map((coin) => ({
+            id: coin.id,
+            name: coin.name,
+            symbol: coin.symbol,
+            price: coin.current_price,
+            marketCap: coin.market_cap,
+            image: coin.image,
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to fetch coins list:', err);
+      }
+    };
+
     fetchCoinsList();
-    fetchCryptoData(crypto, timeframe);
-    fetchCoinDetails(crypto);
-  }, [crypto, timeframe]);
+  }, []); // Empty dependency array ensures this runs only once
 
-  const fetchCoinsList = async () => {
-    try {
-      const response = await fetchWithRetry(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250',
-        3,
-        1000
-      );
-      setCoins(
-        response.map((coin) => ({
-          id: coin.id,
-          name: coin.name,
-          symbol: coin.symbol,
-          price: coin.current_price,
-          marketCap: coin.market_cap,
-        }))
-      );
-    } catch (err) {
-      console.error('Failed to fetch coins list:', err);
-    }
-  };
+  // Fetch chart data whenever `crypto` or `timeframe` changes
+  useEffect(() => {
+    const fetchCryptoData = async () => {
+      try {
+        const url = `https://api.coingecko.com/api/v3/coins/${crypto}/market_chart?vs_currency=usd&days=${timeframe}`;
+        const data = await fetchWithCache(url);
+        const prices = data.prices.map(([timestamp, price]) => ({
+          x: new Date(timestamp),
+          y: price,
+        }));
 
-  const fetchCryptoData = async (cryptoId, days) => {
-    try {
-      const url = `https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=${days}`;
-      const data = await fetchWithRetry(url, 3, 1000);
+        setChartData({
+          labels: prices.map((point) => point.x),
+          datasets: [
+            {
+              label: `${crypto.toUpperCase()} Price (${timeframe === 'max' ? 'All Time' : `Last ${timeframe} Days`})`,
+              data: prices.map((point) => point.y),
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              fill: true,
+            },
+          ],
+        });
+      } catch (err) {
+        setError('Failed to fetch crypto data. Please try again.');
+      }
+    };
 
-      const prices = data.prices.map(([timestamp, price]) => ({
-        x: new Date(timestamp),
-        y: price,
-      }));
+    fetchCryptoData();
+  }, [crypto, timeframe]); // Dependencies: re-fetch when these change
 
-      setChartData({
-        labels: prices.map((point) => point.x),
-        datasets: [
-          {
-            label: `${cryptoId.toUpperCase()} Price (${days === 'max' ? 'All Time' : `Last ${days} Days`})`,
-            data: prices.map((point) => point.y),
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            fill: true,
-          },
-        ],
-      });
-    } catch (err) {
-      console.error('Failed to fetch crypto data.');
-    }
-  };
+  // Fetch coin details whenever `crypto` changes
+  useEffect(() => {
+    const fetchCoinDetails = async () => {
+      try {
+        const url = `https://api.coingecko.com/api/v3/coins/${crypto}`;
+        const data = await fetchWithRetry(url, 3, 1000);
+        const { market_data } = data;
+        setCoinDetails({
+          currentPrice: market_data.current_price.usd,
+          volume24h: market_data.total_volume.usd,
+          marketCap: market_data.market_cap.usd,
+          circulatingSupply: market_data.circulating_supply,
+          totalSupply: market_data.total_supply,
+          priceChange7d: market_data.price_change_percentage_7d_in_currency.usd,
+        });
+      } catch (err) {
+        console.error('Failed to fetch coin details.');
+      }
+    };
 
-  const fetchCoinDetails = async (cryptoId) => {
-    try {
-      const url = `https://api.coingecko.com/api/v3/coins/${cryptoId}`;
-      const data = await fetchWithRetry(url, 3, 1000);
-      const { market_data } = data;
-      setCoinDetails({
-        currentPrice: market_data.current_price.usd,
-        volume24h: market_data.total_volume.usd,
-        marketCap: market_data.market_cap.usd,
-        circulatingSupply: market_data.circulating_supply,
-        totalSupply: market_data.total_supply,
-        priceChange7d: market_data.price_change_percentage_7d_in_currency.usd,
-      });
-    } catch (err) {
-      console.error('Failed to fetch coin details.');
-    }
-  };
+    fetchCoinDetails();
+  }, [crypto]); // Dependencies: re-fetch when `crypto` changes
 
   const formatXAxis = (value, timeframe) => {
     const date = new Date(value);
@@ -130,7 +138,7 @@ const CryptoGraph = () => {
           onSuggestionsClearRequested={() => setSuggestions([])}
           getSuggestionValue={(suggestion) => suggestion.name}
           renderSuggestion={(suggestion) => (
-            <div>
+            <div className="dropdown-item">
               {suggestion.name} ({suggestion.symbol.toUpperCase()})
             </div>
           )}
@@ -150,26 +158,38 @@ const CryptoGraph = () => {
           <div className="card">
             <div className="card-body">
               <h5 className="card-title">Key Metrics</h5>
-              <ul className="list-group">
-                <li className="list-group-item">
-                  <strong>Price:</strong> ${coinDetails.currentPrice?.toFixed(2)}
-                </li>
-                <li className="list-group-item">
-                  <strong>Volume:</strong> ${coinDetails.volume24h?.toLocaleString()}
-                </li>
-                <li className="list-group-item">
-                  <strong>Market Cap:</strong> ${coinDetails.marketCap?.toLocaleString()}
-                </li>
-                <li className="list-group-item">
-                  <strong>Circulating Supply:</strong> {coinDetails.circulatingSupply?.toLocaleString()}
-                </li>
-                <li className="list-group-item">
-                  <strong>Total Supply:</strong> {coinDetails.totalSupply?.toLocaleString() || 'N/A'}
-                </li>
-                <li className="list-group-item">
-                  <strong>7-Day Change:</strong> {coinDetails.priceChange7d?.toFixed(2)}%
-                </li>
-              </ul>
+              {Object.keys(coinDetails).length ? (
+                <table className="table">
+                  <tbody>
+                    <tr>
+                      <th scope="row">Price:</th>
+                      <td>${coinDetails.currentPrice?.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Volume:</th>
+                      <td>${coinDetails.volume24h?.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Market Cap:</th>
+                      <td>${coinDetails.marketCap?.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Circulating Supply:</th>
+                      <td>{coinDetails.circulatingSupply?.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Total Supply:</th>
+                      <td>{coinDetails.totalSupply?.toLocaleString() || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">7-Day Change:</th>
+                      <td>{coinDetails.priceChange7d?.toFixed(2)}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-muted">Loading metrics...</p>
+              )}
             </div>
           </div>
         </div>
@@ -178,22 +198,28 @@ const CryptoGraph = () => {
         <div className="col-md-8">
           <div className="card">
             <div className="card-body">
-              <div className="btn-group mb-3" role="group">
-                {['1D', '1W', '1M', '1Y', 'All'].map((label, index) => (
-                  <button
-                    key={label}
-                    className={`btn ${
-                      timeframe === index.toString()
-                        ? 'btn-primary'
-                        : 'btn-outline-primary'
-                    }`}
-                    onClick={() => setTimeframe(index.toString())}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="btn-toolbar mb-3 justify-content-center" role="toolbar">
+                <div className="btn-group" role="group">
+                  {[
+                    { label: '1D', value: '1' },
+                    { label: '1W', value: '7' },
+                    { label: '1M', value: '30' },
+                    { label: '1Y', value: '365' },
+                    { label: 'All', value: 'max' },
+                  ].map(({ label, value }) => (
+                    <button
+                      key={label}
+                      className={`btn ${
+                        timeframe === value ? 'btn-primary' : 'btn-outline-primary'
+                      }`}
+                      onClick={() => setTimeframe(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {chartData && (
+              {chartData ? (
                 <Line
                   data={chartData}
                   options={{
@@ -209,6 +235,10 @@ const CryptoGraph = () => {
                     },
                   }}
                 />
+              ) : error ? (
+                <div className="alert alert-danger">Failed to load chart data.</div>
+              ) : (
+                <p className="text-muted text-center">Loading graph...</p>
               )}
             </div>
           </div>
