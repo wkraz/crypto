@@ -23,7 +23,6 @@ const CryptoGraph = () => {
   const [coinDetails, setCoinDetails] = useState({});
   const [value, setValue] = useState('');
   const [suggestions, setSuggestions] = useState([]);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchCoinsList();
@@ -45,7 +44,6 @@ const CryptoGraph = () => {
           symbol: coin.symbol,
           price: coin.current_price,
           marketCap: coin.market_cap,
-          image: coin.image,
         }))
       );
     } catch (err) {
@@ -76,7 +74,7 @@ const CryptoGraph = () => {
         ],
       });
     } catch (err) {
-      setError('Failed to fetch crypto data. Please try again.');
+      console.error('Failed to fetch crypto data.');
     }
   };
 
@@ -94,39 +92,31 @@ const CryptoGraph = () => {
         priceChange7d: market_data.price_change_percentage_7d_in_currency.usd,
       });
     } catch (err) {
-      console.error('Failed to fetch coin details:', err);
+      console.error('Failed to fetch coin details.');
     }
   };
 
-  const renderSuggestion = (suggestion) => (
-    <div className="flex justify-between items-center">
-      <span>
-        {suggestion.name} ({suggestion.symbol.toUpperCase()})
-      </span>
-      <span className="text-gray-500">${suggestion.price.toFixed(2)}</span>
-    </div>
-  );
-
-  const formatXAxis = (value) => {
+  const formatXAxis = (value, timeframe) => {
     const date = new Date(value);
     switch (timeframe) {
-      case '1': // 1D
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      case '7': // 1W
-      case '30': // 1M
+      case '1':
+        return date.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+      case '7':
+      case '30':
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      case '365': // 1Y
-      case 'max': // All Time
-        return date.toLocaleDateString([], { month: 'short', year: 'numeric' });
+      case '365':
+      case 'max':
+        return date.toLocaleDateString([], { month: 'short', year: '2-digit' });
       default:
         return date.toLocaleDateString();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-6">
-      <div className="w-full max-w-4xl mb-6 text-center">
-        <h1 className="text-4xl font-bold mb-4 text-blue-600">Crypto Dashboard</h1>
+    <div className="container mt-5">
+      {/* Search Bar */}
+      <div className="text-center mb-4">
+        <h1 className="display-4 text-primary">Crypto Dashboard</h1>
         <Autosuggest
           suggestions={suggestions}
           onSuggestionsFetchRequested={({ value }) => {
@@ -134,92 +124,93 @@ const CryptoGraph = () => {
               .filter((coin) =>
                 coin.name.toLowerCase().includes(value.toLowerCase())
               )
-              .sort((a, b) => b.marketCap - a.marketCap)
               .slice(0, 10);
             setSuggestions(filteredSuggestions);
           }}
           onSuggestionsClearRequested={() => setSuggestions([])}
           getSuggestionValue={(suggestion) => suggestion.name}
-          renderSuggestion={renderSuggestion}
+          renderSuggestion={(suggestion) => (
+            <div>
+              {suggestion.name} ({suggestion.symbol.toUpperCase()})
+            </div>
+          )}
           inputProps={{
-            placeholder: 'Search for a cryptocurrency',
+            placeholder: 'Search Cryptocurrency',
             value,
             onChange: (e, { newValue }) => setValue(newValue),
-            className: 'shadow border rounded w-full py-2 px-3',
+            className: 'form-control',
           }}
           onSuggestionSelected={(e, { suggestion }) => setCrypto(suggestion.id)}
         />
       </div>
-      <div className="w-full max-w-6xl grid grid-cols-4 gap-6">
-        <div className="col-span-1 bg-white shadow-lg rounded p-4">
-          <h2 className="text-xl font-bold mb-4">Key Metrics</h2>
-          <ul>
-            <li>
-              <strong>Current Price:</strong> ${coinDetails.currentPrice?.toFixed(2)}
-            </li>
-            <li>
-              <strong>24H Volume:</strong> ${coinDetails.volume24h?.toLocaleString()}
-            </li>
-            <li>
-              <strong>Market Cap:</strong> ${coinDetails.marketCap?.toLocaleString()}
-            </li>
-            <li>
-              <strong>Circulating Supply:</strong> {coinDetails.circulatingSupply?.toLocaleString()}
-            </li>
-            <li>
-              <strong>Total Supply:</strong> {coinDetails.totalSupply?.toLocaleString() || 'N/A'}
-            </li>
-            <li>
-              <strong>7-Day Change:</strong> {coinDetails.priceChange7d?.toFixed(2)}%
-            </li>
-          </ul>
-        </div>
-        <div
-          className="col-span-3 bg-white shadow-lg rounded p-4 flex justify-center items-center"
-          style={{ height: '50vh', width: '50vw' }} // Constrain graph size
-        >
-          <div>
-            <div className="flex space-x-4 mb-4">
-              {[
-                { label: '1D', value: '1' },
-                { label: '1W', value: '7' },
-                { label: '1M', value: '30' },
-                { label: '1Y', value: '365' },
-                { label: 'All', value: 'max' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTimeframe(option.value)}
-                  className={`py-2 px-4 rounded ${
-                    timeframe === option.value
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+
+      {/* Key Metrics */}
+      <div className="row">
+        <div className="col-md-4">
+          <div className="card">
+            <div className="card-body">
+              <h5 className="card-title">Key Metrics</h5>
+              <ul className="list-group">
+                <li className="list-group-item">
+                  <strong>Price:</strong> ${coinDetails.currentPrice?.toFixed(2)}
+                </li>
+                <li className="list-group-item">
+                  <strong>Volume:</strong> ${coinDetails.volume24h?.toLocaleString()}
+                </li>
+                <li className="list-group-item">
+                  <strong>Market Cap:</strong> ${coinDetails.marketCap?.toLocaleString()}
+                </li>
+                <li className="list-group-item">
+                  <strong>Circulating Supply:</strong> {coinDetails.circulatingSupply?.toLocaleString()}
+                </li>
+                <li className="list-group-item">
+                  <strong>Total Supply:</strong> {coinDetails.totalSupply?.toLocaleString() || 'N/A'}
+                </li>
+                <li className="list-group-item">
+                  <strong>7-Day Change:</strong> {coinDetails.priceChange7d?.toFixed(2)}%
+                </li>
+              </ul>
             </div>
-            {chartData ? (
-              <Line
-                data={chartData}
-                options={{
-                  maintainAspectRatio: true,
-                  responsive: true,
-                  scales: {
-                    x: {
-                      ticks: {
-                        callback: (value, index) => formatXAxis(chartData.labels[index]),
+          </div>
+        </div>
+
+        {/* Graph */}
+        <div className="col-md-8">
+          <div className="card">
+            <div className="card-body">
+              <div className="btn-group mb-3" role="group">
+                {['1D', '1W', '1M', '1Y', 'All'].map((label, index) => (
+                  <button
+                    key={label}
+                    className={`btn ${
+                      timeframe === index.toString()
+                        ? 'btn-primary'
+                        : 'btn-outline-primary'
+                    }`}
+                    onClick={() => setTimeframe(index.toString())}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {chartData && (
+                <Line
+                  data={chartData}
+                  options={{
+                    maintainAspectRatio: true,
+                    responsive: true,
+                    scales: {
+                      x: {
+                        ticks: {
+                          callback: (value, index) =>
+                            formatXAxis(chartData.labels[index], timeframe),
+                        },
                       },
                     },
-                  },
-                }}
-              />
-            ) : error ? (
-              <p className="text-red-500">{error}</p>
-            ) : (
-              <p className="text-gray-500">Loading chart...</p>
-            )}
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
