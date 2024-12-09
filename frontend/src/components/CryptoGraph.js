@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Autosuggest from 'react-autosuggest';
 import { Line } from 'react-chartjs-2';
+import { fetchWithRetry } from '../utils/apiUtils';
+import { Link } from 'react-router-dom';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -17,12 +19,14 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const CryptoGraph = () => {
   const [coins, setCoins] = useState([]);
   const [crypto, setCrypto] = useState('bitcoin');
+  const [timeframe, setTimeframe] = useState('7'); // Default to 1 week
   const [chartData, setChartData] = useState(null);
   const [error, setError] = useState(null);
 
   const [value, setValue] = useState('');
   const [suggestions, setSuggestions] = useState([]);
 
+  // Fetch all coins with their data
   const fetchCoinsList = async () => {
     try {
       const response = await fetch(
@@ -43,21 +47,22 @@ const CryptoGraph = () => {
     }
   };
 
-  const fetchCryptoData = async (cryptoId) => {
+  // Fetch chart data for the selected coin and timeframe
+  const fetchCryptoData = async (cryptoId, days) => {
     try {
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=30`
-      );
-      const data = await response.json();
+      const url = `https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=${days}`;
+      const data = await fetchWithRetry(url, 3, 1000);
+  
       const prices = data.prices.map(([timestamp, price]) => ({
-        x: new Date(timestamp).toLocaleDateString(),
+        x: new Date(timestamp),
         y: price,
       }));
+  
       setChartData({
         labels: prices.map((point) => point.x),
         datasets: [
           {
-            label: `${cryptoId.toUpperCase()} Price (Last 30 Days)`,
+            label: `${cryptoId.toUpperCase()} Price (${days === 'max' ? 'All Time' : `Last ${days} Days`})`,
             data: prices.map((point) => point.y),
             borderColor: 'rgba(75, 192, 192, 1)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -71,11 +76,26 @@ const CryptoGraph = () => {
     }
   };
 
+  // Fetch coin details
+  /* const fetchCoinDetails = async (cryptoId) => {
+    try {
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/coins/${cryptoId}`
+      );
+      const data = await response.json();
+      console.log(data);
+    } catch (err) {
+      console.error('Failed to fetch coin details:', err);
+    }
+  };
+  */
+
   useEffect(() => {
     fetchCoinsList();
-    fetchCryptoData(crypto);
-  }, [crypto]);
+    fetchCryptoData(crypto, timeframe);
+  }, [crypto, timeframe]);
 
+  // Autocomplete handlers
   const onSuggestionsFetchRequested = ({ value }) => {
     const inputValue = value.trim().toLowerCase();
     const inputLength = inputValue.length;
@@ -136,6 +156,22 @@ const CryptoGraph = () => {
     </div>
   );
 
+  const formatXAxis = (value) => {
+    const date = new Date(value);
+    switch (timeframe) {
+      case '1': // 1D
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      case '7': // 1W
+      case '30': // 1M
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      case '365': // 1Y
+      case 'max': // All time
+        return date.toLocaleDateString([], { month: 'short', year: 'numeric' });
+      default:
+        return date.toLocaleDateString();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-6">
       <h1 className="text-4xl font-bold mb-6 text-blue-600">Crypto Graph</h1>
@@ -160,9 +196,42 @@ const CryptoGraph = () => {
         </label>
       </div>
       {renderFavorites()}
+      <div className="flex space-x-4 mb-6">
+        {[
+          { label: '1D', value: '1' },
+          { label: '1W', value: '7' },
+          { label: '1M', value: '30' },
+          { label: '1Y', value: '365' },
+          { label: 'All', value: 'max' },
+        ].map((timeframeOption) => (
+          <button
+            key={timeframeOption.value}
+            onClick={() => setTimeframe(timeframeOption.value)}
+            className={`py-2 px-4 rounded ${
+              timeframe === timeframeOption.value
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            {timeframeOption.label}
+          </button>
+        ))}
+      </div>
       {chartData ? (
         <div className="bg-white shadow-lg rounded px-8 pt-6 pb-8 w-full max-w-2xl">
-          <Line data={chartData} />
+          <Line
+            data={chartData}
+            options={{
+              scales: {
+                x: {
+                  ticks: {
+                    callback: (value, index, values) =>
+                      formatXAxis(chartData.labels[index]),
+                  },
+                },
+              },
+            }}
+          />
         </div>
       ) : error ? (
         <p className="text-red-500 text-sm">{error}</p>
