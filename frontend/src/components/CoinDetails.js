@@ -1,7 +1,7 @@
 // /frontend/src/components/CoinDetails.js
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchWithCache } from '../utils/apiUtils'; // Import the caching function
+import { fetchWithCache } from '../utils/apiUtils.js'; // Import the caching function
 
 const CoinDetails = () => {
   const { id } = useParams(); // Get the coin ID from the URL
